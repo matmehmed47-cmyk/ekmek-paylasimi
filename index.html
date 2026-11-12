@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ekmek Paylaşımı</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@500;700;800&display=swap">
+<style>
+/* Düzen: akıllı tahta için tek ekran — solda 10x10 güneş paneli modeli ve yıl çubuğu, sağda üç yazı kartı
+   (Kesir → Yüzde → Ondalık). Öğretmen önce kartın içine elle yazar, sonra "Göster" ile cevabı açar.
+   Bilerek tek tema (açık): sınıf tahtasında gün ışığında okunsun. */
+:root{
+  --bg:#eef3fb; --panel:#ffffff; --ink:#14213d; --muted:#5a6788; --line:#c9d4ea;
+  --cell:#f7f9fe; --fill:#1f5fd6; --fill2:#3f86ff; --gold:#f2a516;
+  --kesir:#7b3fc4; --yuzde:#e8641b; --ondalik:#12936b; --warn:#d62839;
+  --display:"Baloo 2","Trebuchet MS",system-ui,sans-serif;
+  --body:"Nunito","Segoe UI",system-ui,sans-serif;
+  color-scheme:light;
+}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:clamp(15px,1.2vw,20px);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px}
+*{box-sizing:border-box}
+button,input{font:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+
+.top{display:flex;flex-wrap:wrap;align-items:center;gap:12px;justify-content:space-between;max-width:1500px;margin:0 auto 12px}
+.brand{font-family:var(--display);font-weight:800;font-size:clamp(22px,2.2vw,36px);line-height:1;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.brand small{font-family:var(--body);font-weight:700;font-size:.45em;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+.tb{display:flex;gap:8px;flex-wrap:wrap}
+.fs{border:2px solid var(--line);background:var(--panel);color:var(--ink);border-radius:12px;padding:.45em .9em;font-weight:800}
+
+.stage{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:clamp(12px,2vw,28px);max-width:1500px;margin:0 auto;align-items:start}
+@media (max-width:820px){.stage{grid-template-columns:1fr}}
+
+.left{display:flex;flex-direction:column;gap:12px;min-width:0}
+.ctrl{background:var(--panel);border:2px solid var(--line);border-radius:18px;padding:14px 18px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.story{font-weight:700;line-height:1.4}
+.story b{color:var(--fill)}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.big{font-family:var(--display);font-weight:800;font-size:1.5em;line-height:1}
+.hint{font-size:.9em;color:var(--muted);font-weight:700}
+input[type=range]{width:100%;accent-color:var(--fill);height:34px}
+.ticks{display:flex;justify-content:space-between;font-size:.72em;color:var(--muted);font-variant-numeric:tabular-nums;padding:0 6px}
+.ticks span{width:0;display:flex;justify-content:center}
+.ticks span.ok{color:var(--ondalik);font-weight:800}
+.chip{border:2px solid var(--line);background:var(--cell);border-radius:12px;padding:.3em .8em;font-weight:800;color:var(--ink)}
+.chip[aria-pressed="true"]{border-color:var(--fill);background:var(--fill);color:#fff}
+.challenge{background:#fff7e3;border:2px dashed var(--gold);border-radius:14px;padding:10px 14px;font-weight:700;display:flex;flex-direction:column;gap:8px}
+
+.gridwrap{background:var(--ink);border-radius:20px;padding:clamp(10px,1.4vw,18px);display:flex;flex-direction:column;gap:10px;align-items:center}
+.grid{display:grid;grid-template-rows:repeat(10,1fr);grid-auto-flow:column;grid-auto-columns:1fr;gap:3px;
+  width:min(100%,52vh);aspect-ratio:1/1;max-width:100%;background:#0c1630;padding:3px;border-radius:8px}
+.cell{background:var(--cell);border-radius:3px;position:relative;overflow:hidden;cursor:pointer}
+.num{width:5.5em;border:2px solid var(--line);border-radius:10px;padding:.4em .5em;font-weight:800;color:var(--ink);background:#fff;font-size:1.1em}
+.cell.on{background:linear-gradient(135deg,var(--fill2),var(--fill))}
+.cell .part{position:absolute;left:0;right:0;top:0;background:linear-gradient(135deg,var(--fill2),var(--fill))}
+.cell.blink{animation:blink 1s ease-in-out infinite;box-shadow:0 0 0 3px var(--gold) inset}
+@keyframes blink{50%{background:#ffe9a8}}
+.cell.pop{animation:pop .25s ease-out}
+@keyframes pop{from{transform:scale(.6)}to{transform:scale(1)}}
+.cap{color:#dfe7f8;font-weight:800;text-align:center;font-size:1.05em}
+.cap .warn{color:#ffd166}
+
+.right{display:flex;flex-direction:column;gap:12px;min-width:0}
+.card{border-radius:20px;border:3px solid var(--c);background:var(--panel);overflow:hidden;display:flex;flex-direction:column}
+.k{--c:var(--kesir)} .y{--c:var(--yuzde)} .o{--c:var(--ondalik)}
+.chead{display:flex;align-items:center;gap:10px;padding:6px 10px;background:var(--c);color:#fff}
+.chead .tag{font-family:var(--display);font-weight:800;font-size:1.15em;letter-spacing:.05em;margin-right:auto}
+.cbtn{border:2px solid rgba(255,255,255,.75);background:transparent;color:#fff;border-radius:10px;padding:.2em .8em;font-weight:800}
+.cbtn.show{background:#fff;color:var(--c);border-color:#fff}
+.pad{position:relative;height:clamp(110px,17vh,190px);background:
+  linear-gradient(transparent calc(100% - 1px),#e6ebf5 0) 0 0/100% 34px, #fff;touch-action:none;cursor:crosshair}
+.pad canvas{position:absolute;inset:0;width:100%;height:100%}
+.pad .ph{position:absolute;left:14px;top:8px;color:#b4bfd6;font-weight:800;pointer-events:none}
+.ans{border-top:3px dashed var(--c);padding:8px 16px;font-family:var(--display);font-weight:800;color:var(--c);font-size:clamp(28px,3.2vw,54px);line-height:1.05;display:flex;flex-wrap:wrap;align-items:center;gap:.2em .4em;background:color-mix(in srgb,var(--c) 7%,#fff)}
+.ans .note{font-family:var(--body);font-size:clamp(13px,1vw,17px);color:var(--muted);font-weight:700;width:100%}
+.fr{display:inline-flex;flex-direction:column;align-items:center;line-height:1;font-variant-numeric:tabular-nums}
+.fr span:first-child{border-bottom:.08em solid currentColor;padding:0 .12em .04em}
+.fr span:last-child{padding-top:.04em}
+.eq{color:var(--muted);font-size:.8em}
+.badge{display:inline-block;background:var(--warn);color:#fff;font-family:var(--display);font-size:.45em;padding:.1em .5em;border-radius:10px;transform:rotate(-3deg)}
+.actions{display:flex;flex-wrap:wrap;gap:10px}
+.btn{border:none;background:var(--ink);color:#fff;border-radius:14px;padding:.55em 1.1em;font-weight:800}
+.btn.ghost{background:var(--panel);color:var(--ink);border:2px solid var(--line)}
+@media (prefers-reduced-motion:reduce){.cell.blink,.cell.pop{animation:none}}
+</style>
+
+</head>
+<body>
+<header class="top">
+  <div class="brand">Ekmek Paylaşımı <small>Kesir ile Bölme</small></div>
+  <div class="tb">
+    <button class="fs" id="fs">⛶ Tam ekran</button>
+  </div>
+</header>
+
+
+<style>
+.bread{max-width:1500px;margin:0 auto 8px;background:var(--panel);border:2px solid var(--line);border-radius:22px;padding:16px clamp(12px,2vw,24px);display:flex;flex-direction:column;gap:14px}
+.bh{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+.bh h2{font-family:var(--display);font-size:clamp(22px,2.1vw,34px);margin:0;line-height:1.1}
+.bh .row select{border:2px solid var(--line);border-radius:10px;padding:.3em .4em;font-weight:800;color:var(--ink);background:#fff}
+.bgrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(240px,.45fr);gap:16px;align-items:start}
+@media (max-width:900px){.bgrid{grid-template-columns:1fr}}
+.bmain{display:flex;flex-direction:column;gap:12px;min-width:0}
+.say{background:#fff7e3;border:2px solid var(--gold);border-radius:16px;padding:10px 14px;font-weight:800;font-size:1.1em;line-height:1.4}
+.say .hl{color:var(--warn)}
+.basket{background:#f6ead7;border:3px dashed #c99a5b;border-radius:18px;min-height:100px;padding:10px;display:flex;flex-wrap:wrap;gap:8px;align-content:flex-start}
+.basket .lbl{width:100%;font-weight:800;color:#8a5a1f;pointer-events:none}
+.basket.over,.plate.over{outline:4px solid var(--fill);outline-offset:2px}
+.tool{display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:#e8f0ff;border:2px solid var(--fill);border-radius:14px;padding:8px 12px;font-weight:800}
+.tool .chip{min-width:3em}
+.people{display:grid;grid-template-columns:repeat(var(--n,5),minmax(0,1fr));gap:10px}
+@media (max-width:700px){.people{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.person{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0}
+.fig{width:40px;height:52px;position:relative}
+.fig::before{content:"";position:absolute;left:10px;top:0;width:20px;height:20px;border-radius:50%;background:#f1c9a5;border:2px solid var(--ink)}
+.fig::after{content:"";position:absolute;left:2px;top:22px;width:36px;height:30px;border-radius:18px 18px 6px 6px;background:var(--pc);border:2px solid var(--ink)}
+.pname{font-weight:800;color:var(--muted);font-size:.9em}
+.plate{width:100%;min-height:110px;border-radius:50% / 38%;border:3px solid #d3d9e6;background:radial-gradient(circle,#fff 55%,#f1f4fa 56%);display:flex;flex-wrap:wrap;gap:4px;align-content:center;justify-content:center;padding:14px 10px}
+.plate.bad{border-color:var(--warn);background:#ffe5e8}
+.plate.good{border-color:var(--ondalik);background:#e3f6ee}
+.tot{font-weight:800;text-align:center;font-variant-numeric:tabular-nums;min-height:2.6em;line-height:1.3;color:var(--ink)}
+.tot .dec{color:var(--ondalik);font-family:var(--display);font-size:1.25em}
+.pc{height:38px;border-radius:19px 19px 9px 9px;background:linear-gradient(#eab06a,#c27a2c);border:2px solid #8f5317;color:#fff;font-weight:800;font-size:12px;
+  display:flex;align-items:center;justify-content:center;touch-action:none;user-select:none;-webkit-user-select:none;cursor:grab;box-shadow:inset 0 3px 0 rgba(255,255,255,.35);flex:none}
+.pc.whole{width:70px;background:repeating-linear-gradient(110deg,transparent 0 16px,rgba(120,60,10,.45) 16px 18px),linear-gradient(#eab06a,#c27a2c)}
+.pc.sel{outline:4px solid var(--fill);outline-offset:2px}
+.pc.lift{opacity:.25}
+.pc.ghost{position:fixed;pointer-events:none;z-index:50;transform:translate(-50%,-50%) scale(1.12);opacity:.95}
+.dside{display:flex;flex-direction:column;gap:10px;min-width:0}
+.ldiv{font-family:ui-monospace,"Cascadia Mono","Courier New",monospace;font-size:clamp(24px,2.3vw,38px);line-height:1.25;white-space:pre;background:#fff;border:2px solid var(--line);border-radius:16px;padding:12px 16px;overflow-x:auto;color:var(--ink)}
+.ldiv .r{color:var(--warn);font-weight:800}
+.ldiv .q{color:var(--fill);font-weight:800}
+.ldiv .k{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:4px}
+.dnote{font-weight:700;color:var(--muted);line-height:1.4}
+.dnote b{color:var(--warn)}
+</style>
+
+<section class="bread" id="bread">
+  <div class="bh">
+    <h2>Ekmekleri paylaştıralım</h2>
+    <div class="row">
+      <button class="chip" data-pre="10,5">10 ekmek · 5 kişi</button>
+      <button class="chip" data-pre="7,5">7 ekmek · 5 kişi</button>
+      <button class="chip" data-pre="9,4">9 ekmek · 4 kişi</button>
+      <label class="hint">Ekmek <select id="b-e"></select></label>
+      <label class="hint">Kişi <select id="b-k"></select></label>
+      <button class="btn ghost" id="b-start">Başlat</button>
+    </div>
+  </div>
+  <div class="bgrid">
+    <div class="bmain">
+      <div class="say" id="b-say"></div>
+      <div class="basket" id="b-basket" data-drop="b"><span class="lbl" id="b-blbl">Sepet</span></div>
+      <div class="tool" id="b-tool" hidden>
+        <span id="b-seltxt">Seçili ekmek</span>
+        <span>Kaç parçaya böleyim?</span>
+        <button class="chip" data-cut="2">2</button><button class="chip" data-cut="3">3</button><button class="chip" data-cut="4">4</button>
+        <button class="chip" data-cut="5">5</button><button class="chip" data-cut="10">10</button>
+        <span class="hint">ya da bir tabağa dokun</span>
+        <button class="btn ghost" id="b-unsel">Vazgeç</button>
+      </div>
+      <div class="people" id="b-people"></div>
+      <div class="actions">
+        <button class="btn ghost" id="b-dw">Tam ekmekleri dağıt</button>
+        <button class="btn ghost" id="b-db">Sepettekileri dağıt</button>
+        <button class="btn ghost" id="b-y3">7/5 yolu: hepsini 5'e böl</button>
+        <button class="btn" id="b-check">Herkes eşit mi?</button>
+        <button class="btn ghost" id="b-reset">Baştan başlat</button>
+      </div>
+    </div>
+    <div class="dside">
+      <div class="ldiv" id="b-div" aria-label="Bölme şeması"></div>
+      <div class="actions">
+        <button class="btn ghost" id="b-prev">◀</button>
+        <button class="btn" id="b-next">Bölme adımı ▶</button>
+        <button class="btn ghost" id="b-all">Hepsi</button>
+      </div>
+      <div class="dnote" id="b-dnote"></div>
+    </div>
+  </div>
+</section>
+
+<script>
+(function(){
+const $=id=>document.getElementById(id);
+const gcd=(a,b)=>{a=Math.abs(a);b=Math.abs(b);while(b){[a,b]=[b,a%b]}return a||1};
+const lcm=(a,b)=>a/gcd(a,b)*b;
+const only25=q=>{while(q%2===0)q/=2;while(q%5===0)q/=5;return q===1};
+const COLS=['#ff8fab','#7cc6fe','#9be59b','#ffd166','#c3a6ff','#ffad7a'];
+let E=10,K=5,P=[],nid=0,sel=null,check=false,stage=0,maxStage=0,steps=null,memo={};
+
+for(let i=1;i<=20;i++){$('b-e').add(new Option(i,i))} for(let i=2;i<=6;i++){$('b-k').add(new Option(i,i))}
+
+function start(e,k){E=e;K=k;P=[];nid=0;sel=null;check=false;stage=0;
+  for(let i=0;i<E;i++)P.push({id:nid++,d:1,loc:'b'});
+  $('b-e').value=E;$('b-k').value=K;
+  $('b-y3').textContent=`${E}/${K} yolu: hepsini ${K}'${K===2?'ye':K===6?'ya':'e'} böl`;
+  document.querySelectorAll('[data-pre]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.pre===E+','+K));
+  buildSteps();buildPeople();render();}
+
+// --- uzun bölme adımları ---
+function buildSteps(){
+  const q=Math.floor(E/K);let r=E%K;const st=[{prod:q*K,rem:r,dig:String(q)}];
+  let n=0;while(r!==0&&n<3){const cur=r*10,d=Math.floor(cur/K);r=cur%K;st.push({prod:d*K,rem:r,dig:String(d)});n++}
+  steps={st,more:r!==0};maxStage=1+2*(st.length-1);}
+function drawDiv(){
+  const {st,more}=steps,Ls=String(E).length,W=Ls+st.length+2;
+  const pad=(txt,col)=>' '.repeat(Math.max(0,col+1-txt.length+1));
+  const lines=[];
+  // satır 0: bölünen | bölen
+  lines.push({l:pad(String(E),Ls-1)+E,r:`<span class="k"> ${K} </span>`});
+  let quo=st[0].dig;
+  for(let j=0;j<st.length;j++){
+    const col=Ls-1+j, s=st[j];
+    if(stage<(j===0?1:2*j+1))break;
+    if(j>0)quo+=(j===1?',':'')+s.dig;
+    const pt='−'+s.prod;
+    lines.push({l:pad(pt,col)+pt});
+    const rem=String(s.rem);let ln=pad(rem,col)+rem;
+    const next=st[j+1];
+    if(next&&stage>=2*(j+1)) ln+='<span class="r">0</span>';
+    lines.push({l:ln});
+  }
+  if(stage>=2&&steps.st.length>1&&!quo.includes(','))quo+=',';
+  if(stage>=maxStage&&more)quo+='...';
+  const html=lines.map((x,i)=>{const L=x.l, plain=L.replace(/<[^>]+>/g,'');
+    const gap=' '.repeat(Math.max(1,W-plain.length));
+    let right='';if(i===0)right=x.r;else if(i===1)right=` <span class="q">${quo}</span>`;
+    return L+gap+(i<=1?'│':' ')+right}).join('\n');
+  $('b-div').innerHTML=html;
+  const r0=st[0].rem;
+  let note='';
+  if(stage===0)note=`${E} ÷ ${K}: ${E} ekmeği ${K} kişiye paylaştırıyoruz.`;
+  else if(stage===1)note=r0?`Herkese <b>${st[0].dig}</b> tam ekmek. Kalan <b>${r0}</b> ekmek.`:`Herkese <b>${st[0].dig}</b> ekmek. Kalan yok, bölme bitti.`;
+  else if(stage===2)note=`Kalan ekmek sayısının (${r0}) yanına <b>0</b> yazdık: ${r0} ekmeği 10'ar parçaya böldük, <b>${r0*10} tane onda bir</b> oldu. Bölüme virgül geldi.`;
+  else if(stage<maxStage)note=stage%2===0?`Yine kalan var: yanına <b>0</b> yazdık, parçaları bir kez daha 10'a böldük (onda birden yüzde bire).`:`Bölme devam ediyor. Kalan sıfır olana kadar sürer.`;
+  else note=`${E} ÷ ${K} = <b>${quo}</b>. Yani ${E}/${K} = ${quo}.`+(more?` Kalan hiç sıfır olmuyor: <b>bitmiyor!</b>`:'');
+  $('b-dnote').innerHTML=note;
+  $('b-prev').disabled=stage<=0;$('b-next').disabled=stage>=maxStage;
+}
+$('b-prev').onclick=()=>{stage=Math.max(0,stage-1);drawDiv()};
+$('b-next').onclick=()=>{stage=Math.min(maxStage,stage+1);drawDiv()};
+$('b-all').onclick=()=>{stage=maxStage;drawDiv()};
+
+// --- kişiler ---
+function buildPeople(){const box=$('b-people');box.innerHTML='';box.style.setProperty('--n',K);
+  for(let i=0;i<K;i++){const p=document.createElement('div');p.className='person';
+    p.innerHTML=`<div class="fig" style="--pc:${COLS[i]}"></div><div class="pname">${i+1}. kişi</div><div class="plate" data-drop="${i}"></div><div class="tot"></div>`;
+    p.querySelector('.plate').addEventListener('click',e=>{if(e.target.closest('.pc'))return;if(sel!==null)move(sel,i)});
+    box.appendChild(p)}}
+$('b-basket').addEventListener('click',e=>{if(e.target.closest('.pc'))return;if(sel!==null)move(sel,'b')});
+
+function sumOf(loc){let n=0,d=1;for(const p of P)if(p.loc===loc){const L=lcm(d,p.d);n=n*(L/d)+L/p.d;d=L}const g=gcd(n,d);return{n:n/g,d:d/g}}
+function totText(loc){
+  const ps=P.filter(p=>p.loc===loc);if(!ps.length)return'—';
+  const whole=ps.filter(p=>p.d===1).length,fr=ps.filter(p=>p.d>1);
+  let t=whole?`${whole} ekmek`:'';
+  if(fr.length){const ds=[...new Set(fr.map(p=>p.d))];
+    let fn,fd;if(ds.length===1){fd=ds[0];fn=fr.length}else{fd=1;fn=0;for(const p of fr){const L=lcm(fd,p.d);fn=fn*(L/fd)+L/p.d;fd=L}}
+    const extraW=Math.floor(fn/fd);
+    t+=(t?' + ':'')+`${fn}/${fd}`;
+    const s=sumOf(loc);
+    if(only25(s.d)){let v=s.n/s.d;t+=`<br><span class="dec">= ${String(+v.toFixed(4)).replace('.',',')}</span>`}
+    else t+=`<br><span class="dec">≈ ${String(+(s.n/s.d).toFixed(2)).replace('.',',')}…</span>`;
+  }
+  return t;}
+
+// --- çizim ---
+function pieceEl(p,n=1){const el=document.createElement('div');el.className='pc'+(p.d===1?' whole':'')+(sel===p.id?' sel':'');
+  el.dataset.id=p.id;el.style.width=p.d===1?'':Math.max(30,Math.round(70*n/p.d)+18)+'px';el.textContent=p.d===1?'':n+'/'+p.d;if(n>1)el.dataset.grp=1;
+  el.setAttribute('aria-label',p.d===1?'bir ekmek':'1/'+p.d+' ekmek');attachDrag(el,p);return el}
+function render(){
+  const bk=$('b-basket');bk.querySelectorAll('.pc').forEach(x=>x.remove());
+  P.filter(p=>p.loc==='b').forEach(p=>bk.appendChild(pieceEl(p)));
+  const inB=P.filter(p=>p.loc==='b');
+  $('b-blbl').textContent=inB.length?`Sepet (${inB.length} parça)`:'Sepet boş';
+  const plates=[...document.querySelectorAll('#b-people .plate')],tots=[...document.querySelectorAll('#b-people .tot')];
+  const sums=plates.map((_,i)=>sumOf(i));
+  const eqAll=sums.every(s=>s.n*sums[0].d===sums[0].n*s.d);
+  plates.forEach((pl,i)=>{pl.innerHTML='';const mine=P.filter(p=>p.loc===i);
+    mine.filter(p=>p.d===1).forEach(p=>pl.appendChild(pieceEl(p)));
+    const g={};mine.filter(p=>p.d>1).forEach(p=>(g[p.d]=g[p.d]||[]).push(p));
+    Object.keys(g).map(Number).sort((a,b)=>a-b).forEach(d=>pl.appendChild(pieceEl(g[d][g[d].length-1],g[d].length)));
+    pl.classList.toggle('bad',check&&!eqAll);pl.classList.toggle('good',check&&eqAll&&!inB.length);
+    tots[i].innerHTML=totText(i)});
+  // seçim aracı
+  const sp=P.find(p=>p.id===sel);$('b-tool').hidden=!sp;
+  if(sp)$('b-seltxt').textContent=sp.d===1?'Seçili: 1 ekmek.':`Seçili: 1/${sp.d} parça.`;
+  // otomatik bölme adımı
+  const q=Math.floor(E/K),r=E%K;
+  const wholesOk=[...Array(K).keys()].every(i=>P.filter(p=>p.loc===i&&p.d===1).length===q)&&inB.filter(p=>p.d===1).length+P.filter(p=>p.d>1).length/10>=0;
+  if(wholesOk&&stage<1&&q>0)stage=1;
+  if(P.some(p=>p.d===10)&&stage<2&&r)stage=2;
+  const done=!inB.length&&eqAll;
+  if(done)stage=maxStage;
+  drawDiv();
+  // anlatıcı
+  const wB=inB.filter(p=>p.d===1).length;
+  let msg;
+  if(done){const key=E+'/'+K,frs=P.filter(p=>p.loc===0&&p.d>1),cur=frs.length?frs.length+'/'+frs[0].d:'';
+    msg=`Paylaşım bitti, herkes eşit: her kişiye <span class="hl">${totText(0).replace('<br>',' ')}</span> ekmek. ${E} ÷ ${K} = ${E}/${K}.`;
+    const w=P.filter(p=>p.loc===0&&p.d===1).length,one=new Set(frs.map(p=>p.d)).size===1;
+    const m=memo[key]||(memo[key]={});
+    if(cur&&one&&!(m.last&&m.last.w===w&&m.last.f===cur)){if(m.last&&m.last.w===w)m.prev=m.last;else m.prev=null;m.last={w,f:cur}}
+    if(cur&&one&&m.prev&&m.last.f===cur&&m.prev.f!==cur)msg+=` <br>Önce <b>${m.prev.f}</b> almıştık, şimdi <b>${cur}</b>. Parçalar değişti ama pay aynı: ${m.prev.f} = ${cur}!`;
+    if(frs.length&&frs.every(p=>p.d===K)&&!P.some(p=>p.loc===0&&p.d===1))msg+=` <br><b>${frs.length} tane 1/${K}</b> = <b>${E}/${K}</b>: kesrin adı buradan geliyor!`;}
+  else if(!inB.length)msg=`Sepet boş ama paylar <span class="hl">eşit değil</span>. Tabaklar arasında taşıyarak düzelt.`;
+  else if(stage>=1&&r&&wB===r&&!P.some(p=>p.d>1))msg=`Herkese ${q} ekmek verdik, <span class="hl">${r} ekmek kaldı</span>. ${r} ekmeği ${K} kişiye nasıl paylaştırırız? Bir ekmeğe dokun ve parçalara böl.`;
+  else if(P.some(p=>p.d>1&&p.loc==='b')){const ds=[...new Set(inB.filter(p=>p.d>1).map(p=>p.d))];const cnt=inB.filter(p=>p.d>1).length;
+    msg=cnt%K===0?`Sepette ${cnt} parça var. ${K} kişiye ${cnt/K}'er parça düşer. Dağıt!`:`Sepette ${cnt} parça var. ${K} kişiye eşit gitmez: <span class="hl">${cnt%K} parça artar</span>. Başka sayıya bölmeyi dene.`;
+    if(ds.includes(10))msg+=` (10 parçaya bölmek = kitapta kalanın yanına 0 yazmak!)`;}
+  else msg=`${E} ekmeği ${K} kişiye <b>eşit</b> paylaştır. Ekmekleri tabaklara sürükle ya da ekmeğe dokunup tabağa dokun.`;
+  $('b-say').innerHTML=msg;
+}
+
+function move(id,loc){const p=P.find(x=>x.id===id);if(!p)return;p.loc=loc;sel=null;check=false;render()}
+document.querySelectorAll('[data-cut]').forEach(b=>b.onclick=()=>{
+  const p=P.find(x=>x.id===sel);if(!p)return;const n=+b.dataset.cut;if(p.d*n>100)return;
+  const i=P.indexOf(p),loc=p.loc,np=[];for(let j=0;j<n;j++)np.push({id:nid++,d:p.d*n,loc});
+  P.splice(i,1,...np);sel=null;check=false;render()});
+$('b-unsel').onclick=()=>{sel=null;render()};
+$('b-check').onclick=()=>{check=true;render()};
+$('b-dw').onclick=()=>{start(E,K);const q=Math.floor(E/K);let k=0;P.forEach(p=>{if(k<q*K){p.loc=k%K;k++}});render()};
+$('b-db').onclick=()=>{const g={};P.filter(p=>p.loc==='b').forEach(p=>(g[p.d]=g[p.d]||[]).push(p));
+  Object.values(g).forEach(arr=>{const m=Math.floor(arr.length/K)*K;arr.slice(0,m).forEach((p,i)=>p.loc=i%K)});sel=null;check=false;render()};
+$('b-y3').onclick=()=>{start(E,K);const np=[];P.forEach(()=>{for(let j=0;j<K;j++)np.push({id:nid++,d:K,loc:'b'})});P=np;render()};
+$('b-reset').onclick=()=>start(E,K);
+$('b-start').onclick=()=>start(+$('b-e').value,+$('b-k').value);
+document.querySelectorAll('[data-pre]').forEach(b=>b.onclick=()=>{const [e,k]=b.dataset.pre.split(',').map(Number);start(e,k)});
+
+// --- sürükle / dokun ---
+function attachDrag(el,p){
+  el.addEventListener('pointerdown',e=>{
+    e.preventDefault();e.stopPropagation();
+    const sx=e.clientX,sy=e.clientY;let ghost=null,over=null;
+    const mv=ev=>{
+      if(!ghost&&Math.hypot(ev.clientX-sx,ev.clientY-sy)>8){ghost=el.cloneNode(true);ghost.classList.add('ghost');ghost.classList.remove('sel');if(el.dataset.grp){ghost.textContent='1/'+p.d;ghost.style.width=Math.max(30,Math.round(70/p.d)+18)+'px'}document.body.appendChild(ghost);el.classList.add('lift')}
+      if(ghost){ghost.style.left=ev.clientX+'px';ghost.style.top=ev.clientY+'px';
+        const t=document.elementFromPoint(ev.clientX,ev.clientY)?.closest('[data-drop]');
+        if(over&&over!==t)over.classList.remove('over');if(t){t.classList.add('over')}over=t}};
+    const up=ev=>{window.removeEventListener('pointermove',mv);window.removeEventListener('pointerup',up);window.removeEventListener('pointercancel',up);
+      if(over)over.classList.remove('over');
+      if(ghost){ghost.remove();el.classList.remove('lift');
+        const t=document.elementFromPoint(ev.clientX,ev.clientY)?.closest('[data-drop]');
+        if(t){const d=t.dataset.drop;move(p.id,d==='b'?'b':+d)}else render()}
+      else{sel=sel===p.id?null:p.id;render()}};
+    window.addEventListener('pointermove',mv);window.addEventListener('pointerup',up);window.addEventListener('pointercancel',up);
+  });
+  el.addEventListener('click',e=>e.stopPropagation());
+}
+
+start(10,5);
+})();
+</script>
+
+<script>
+document.getElementById('fs').onclick=()=>{try{const d=document;if(!d.fullscreenElement)(d.documentElement.requestFullscreen?.()||Promise.resolve()).catch(()=>{});else d.exitFullscreen?.()}catch(e){}};
+</script>
+
+</body>
+</html>
